@@ -28,6 +28,10 @@ openBtn.Text = "PAINEL"
 openBtn.BorderSizePixel = 0
 openBtn.Parent = screenGui
 
+local openCorner = Instance.new("UICorner")
+openCorner.CornerRadius = UDim.new(0, 8)
+openCorner.Parent = openBtn
+
 -- PAINEL
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
@@ -36,7 +40,12 @@ panel.Position = UDim2.new(0.5, -175, 0.5, -140)
 panel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 panel.BorderSizePixel = 0
 panel.Visible = false
+panel.ZIndex = 100
 panel.Parent = screenGui
+
+local panelCorner = Instance.new("UICorner")
+panelCorner.CornerRadius = UDim.new(0, 12)
+panelCorner.Parent = panel
 
 -- BOTÃO SNAP
 local snapBtn = Instance.new("TextButton")
@@ -49,7 +58,61 @@ snapBtn.TextSize = 36
 snapBtn.Font = Enum.Font.GothamBold
 snapBtn.Text = "SNAP"
 snapBtn.BorderSizePixel = 0
+snapBtn.ZIndex = 101
 snapBtn.Parent = panel
+
+local snapCorner = Instance.new("UICorner")
+snapCorner.CornerRadius = UDim.new(0, 10)
+snapCorner.Parent = snapBtn
+
+-- ==========================================
+-- FUNÇÃO PARA ACHAR JOGADOR
+-- ==========================================
+
+local function findPlayer(targetName)
+	-- Opção 1: Procurar nome exato
+	local exactMatch = Players:FindFirstChild(targetName)
+	if exactMatch and exactMatch.Character then
+		return exactMatch
+	end
+	
+	-- Opção 2: Procurar por parte do nome
+	for _, p in pairs(Players:GetPlayers()) do
+		if string.find(p.Name:lower(), targetName:lower()) then
+			if p.Character then
+				return p
+			end
+		end
+	end
+	
+	-- Opção 3: Se não achar, retorna nil
+	return nil
+end
+
+-- ==========================================
+-- FUNÇÃO PARA MOSTRAR MENSAGEM
+-- ==========================================
+
+local function showMessage(text, color)
+	local msg = Instance.new("TextLabel")
+	msg.Size = UDim2.new(0, 400, 0, 80)
+	msg.Position = UDim2.new(0.5, -200, 0.5, -40)
+	msg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	msg.BackgroundTransparency = 0.3
+	msg.TextColor3 = color
+	msg.TextSize = 18
+	msg.Font = Enum.Font.Gotham
+	msg.Text = text
+	msg.ZIndex = 2000
+	msg.Parent = screenGui
+	
+	local msgCorner = Instance.new("UICorner")
+	msgCorner.CornerRadius = UDim.new(0, 12)
+	msgCorner.Parent = msg
+	
+	task.wait(3)
+	msg:Destroy()
+end
 
 -- ==========================================
 -- FUNÇÃO SNAP
@@ -58,22 +121,49 @@ snapBtn.Parent = panel
 local function doSnap()
 	print("INICIANDO SNAP")
 	
-	-- Achar jogador
-	local targetPlayer = Players:FindFirstChild("los_tralaleritos778")
-	if not targetPlayer or not targetPlayer.Character then
-		print("Jogador não encontrado")
-		return
+	-- Procurar jogador
+	local targetPlayer = findPlayer("los_tralaleritos778")
+	
+	local char
+	local hrp
+	
+	if targetPlayer and targetPlayer.Character then
+		print("✅ Jogador encontrado: " .. targetPlayer.Name)
+		char = targetPlayer.Character
+		hrp = char:FindFirstChild("HumanoidRootPart")
+		
+		if not hrp then
+			print("⚠️ Jogador sem HumanoidRootPart")
+			showMessage("❌ Jogador sem HumanoidRootPart!", Color3.fromRGB(255, 0, 0))
+			return
+		end
+	else
+		print("⚠️ Jogador não encontrado! Criando SNAP genérico...")
+		showMessage("⚠️ Jogador offline! Criando SNAP fantasma...", Color3.fromRGB(255, 200, 0))
+		
+		-- Criar um "boneco fantasma" genérico para o snap
+		char = Instance.new("Model")
+		char.Name = "SnapFantasma"
+		
+		hrp = Instance.new("Part")
+		hrp.Name = "HumanoidRootPart"
+		hrp.Shape = Enum.PartType.Ball
+		hrp.Size = Vector3.new(2, 2, 2)
+		hrp.CanCollide = false
+		hrp.Material = Enum.Material.Neon
+		hrp.BrickColor = BrickColor.new("Cyan")
+		hrp.TopSurface = Enum.SurfaceType.Smooth
+		hrp.BottomSurface = Enum.SurfaceType.Smooth
+		hrp.Parent = char
+		
+		char.Parent = workspace
 	end
 	
-	local char = targetPlayer.Character
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	if not hrp then return end
-	
-	-- CLONAR
+	-- CLONAR PERSONAGEM
 	local clone = char:Clone()
 	clone.Parent = workspace
 	
-	-- Remover humanoid
+	-- Remover humanoid se existir
 	if clone:FindFirstChild("Humanoid") then
 		clone.Humanoid:Destroy()
 	end
@@ -81,6 +171,7 @@ local function doSnap()
 	-- Posicionar na câmera
 	local cloneHrp = clone:FindFirstChild("HumanoidRootPart")
 	if not cloneHrp then
+		print("❌ Clone não tem HumanoidRootPart")
 		clone:Destroy()
 		return
 	end
@@ -98,7 +189,7 @@ local function doSnap()
 	end
 	
 	-- CRESCIMENTO
-	print("Crescendo...")
+	print("📈 Crescendo...")
 	local t0 = tick()
 	while tick() - t0 < 2.5 do
 		local prog = (tick() - t0) / 2.5
@@ -123,7 +214,7 @@ local function doSnap()
 	task.wait(0.5)
 	
 	-- ESTRALO
-	print("SNAP!")
+	print("💥 ESTRALANDO!")
 	local effect = Instance.new("Part")
 	effect.Shape = Enum.PartType.Ball
 	effect.Size = Vector3.new(2, 2, 2)
@@ -167,7 +258,7 @@ local function doSnap()
 	clone:Destroy()
 	
 	-- CONGELAMENTO
-	print("CONGELADO POR 5 MIN")
+	print("❄️ CONGELADO POR 5 MIN")
 	
 	local overlay = Instance.new("Frame")
 	overlay.Size = UDim2.new(1, 0, 1, 0)
@@ -185,9 +276,13 @@ local function doSnap()
 	label.TextColor3 = Color3.fromRGB(0, 255, 255)
 	label.TextSize = 24
 	label.Font = Enum.Font.GothamBold
-	label.Text = "EVENTOS CONGELADOS"
+	label.Text = "⚡ EVENTOS CONGELADOS ⚡"
 	label.ZIndex = 1001
 	label.Parent = screenGui
+	
+	local labelCorner = Instance.new("UICorner")
+	labelCorner.CornerRadius = UDim.new(0, 12)
+	labelCorner.Parent = label
 	
 	local timer = Instance.new("TextLabel")
 	timer.Size = UDim2.new(0, 200, 0, 60)
@@ -199,6 +294,10 @@ local function doSnap()
 	timer.Font = Enum.Font.GothamBold
 	timer.ZIndex = 1001
 	timer.Parent = screenGui
+	
+	local timerCorner = Instance.new("UICorner")
+	timerCorner.CornerRadius = UDim.new(0, 12)
+	timerCorner.Parent = timer
 	
 	local inicio = tick()
 	while tick() - inicio < 300 do
@@ -213,7 +312,7 @@ local function doSnap()
 	label:Destroy()
 	timer:Destroy()
 	
-	print("DESCONGELADO")
+	print("✅ DESCONGELADO!")
 end
 
 -- ==========================================
@@ -222,10 +321,21 @@ end
 
 openBtn.MouseButton1Click:Connect(function()
 	panel.Visible = not panel.Visible
+	openBtn.Text = panel.Visible and "FECHAR" or "PAINEL"
 end)
 
 snapBtn.MouseButton1Click:Connect(function()
+	panel.Visible = false
+	openBtn.Text = "PAINEL"
 	doSnap()
 end)
 
-print("✅ SNAP SCRIPT CARREGADO")
+snapBtn.MouseEnter:Connect(function()
+	snapBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+end)
+
+snapBtn.MouseLeave:Connect(function()
+	snapBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+end)
+
+print("✅ SNAP SCRIPT CARREGADO - PRONTO PARA SNAP!")
